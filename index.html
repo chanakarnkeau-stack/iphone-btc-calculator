@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>iPhone vs Bitcoin Calculator</title>
+  <!-- Tailwind via CDN for quick styling -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <meta name="description" content="คำนวณว่า หากใช้เงินจำนวนเดียวกันไปซื้อ iPhone หรือ Bitcoin ในวันนั้น วันนี้จะเหลือมูลค่าเท่าไร" />
+  <style>
+    /* ปรับสไตล์เพิ่มเติมเล็กน้อย */
+    .card { border: 1px solid rgb(226, 232, 240); border-radius: 1rem; background: white; }
+    .muted { color: rgb(100, 116, 139); }
+    .btn { padding: 0.6rem 1rem; border-radius: 0.75rem; border: 1px solid rgb(203, 213, 225); background: #111827; color: white; font-weight: 600;}
+    .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+    .input, select { border: 1px solid rgb(203, 213, 225); border-radius: 0.5rem; padding: 0.55rem 0.75rem; width: 100%; }
+    .range { width: 100%; }
+    .pill { font-size: 0.8rem; padding: 0.15rem 0.5rem; border-radius: 999px; background: #F1F5F9; }
+    .badge { font-size: 0.85rem; padding: 0.25rem 0.5rem; border-radius: 0.5rem; background: #EEF2FF; color: #3730A3; }
+    .mono { font-variant-numeric: tabular-nums; }
+  </style>
+</head>
+<body class="min-h-screen bg-gradient-to-b from-white to-slate-50">
+  <main class="max-w-5xl mx-auto p-6 space-y-6">
+    <header class="flex items-center justify-between">
+      <h1 class="text-2xl sm:text-3xl font-bold tracking-tight">ตัวคำนวณ iPhone vs Bitcoin</h1>
+      <span class="pill">เวอร์ชันไฟล์เดียว</span>
+    </header>
+
+    <section class="card p-6 space-y-6">
+      <div class="grid md:grid-cols-3 gap-6">
+        <div class="space-y-2">
+          <label class="block text-sm font-medium">งบประมาณ (USD)</label>
+          <input id="amount" type="number" min="1" step="1" class="input" value="999" />
+          <p class="text-xs muted">ใส่ราคาตอนซื้อ iPhone หรือจำนวนเงินที่อยากเทียบ</p>
+        </div>
+        <div class="space-y-2">
+          <label class="block text-sm font-medium">วันที่ซื้อ</label>
+          <input id="date" type="date" class="input" value="2017-11-03" max="" />
+          <p class="text-xs muted">วันที่ซื้อ iPhone หรือวันที่เอาเงินไปซื้อ BTC</p>
+        </div>
+        <div class="space-y-2">
+          <label class="block text-sm font-medium">พรีเซ็ต iPhone (ช่วยกรอกอัตโนมัติ)</label>
+          <select id="preset" class="input">
+            <option value="">— เลือก —</option>
+            <option value="599|2010-07-01">iPhone 4 (2010) — $599</option>
+            <option value="649|2012-09-21">iPhone 5 (2012) — $649</option>
+            <option value="649|2014-09-19">iPhone 6 (2014) — $649</option>
+            <option value="999|2017-11-03">iPhone X (2017) — $999</option>
+            <option value="699|2019-09-20">iPhone 11 (2019) — $699</option>
+            <option value="799|2020-10-23">iPhone 12 (2020) — $799</option>
+            <option value="799|2021-09-24">iPhone 13 (2021) — $799</option>
+            <option value="799|2022-09-16">iPhone 14 (2022) — $799</option>
+            <option value="799|2023-09-22">iPhone 15 (2023) — $799</option>
+            <option value="999|2023-09-22">iPhone 15 Pro (2023) — $999</option>
+          </select>
+          <p class="text-xs muted">ตัวเลขเป็น MSRP โดยประมาณ</p>
+        </div>
+      </div>
+
+      <div class="grid md:grid-cols-3 gap-6">
+        <div class="space-y-1">
+          <label class="block text-sm font-medium">มูลค่าลดปีแรก (%)</label>
+          <input id="drop1" type="range" min="0" max="90" step="1" value="50" class="range" />
+          <div class="text-sm muted"><span id="drop1Val" class="badge">50%</span> โดยทั่วไปมือถือปีแรกมักลดลงราว ๆ 50%</div>
+        </div>
+        <div class="space-y-1">
+          <label class="block text-sm font-medium">ลดปีถัดไปต่อปี (%)</label>
+          <input id="dropN" type="range" min="0" max="60" step="1" value="25" class="range" />
+          <div class="text-sm muted"><span id="dropNVal" class="badge">25%</span> สมมติฐานเริ่มต้น 25%/ปี</div>
+        </div>
+        <div class="space-y-1">
+          <label class="block text-sm font-medium">มูลค่าขั้นต่ำ (% ของราคาตั้งต้น)</label>
+          <input id="floor" type="range" min="0" max="50" step="1" value="10" class="range" />
+          <div class="text-sm muted"><span id="floorVal" class="badge">10%</span> ป้องกันมูลค่ากลายเป็นศูนย์</div>
+        </div>
+      </div>
+
+      <div class="flex gap-3">
+        <button id="calcBtn" class="btn">คำนวณ</button>
+        <div id="status" class="text-sm muted"></div>
+      </div>
+
+      <div id="error" class="text-sm text-rose-600"></div>
+
+      <div id="results" class="grid md:grid-cols-2 gap-6 hidden">
+        <div class="card p-5 space-y-2">
+          <div class="flex items-center gap-2 text-lg font-semibold">📱 iPhone (ประเมิน)</div>
+          <div id="iphoneNow" class="text-3xl font-bold mono">$0</div>
+          <p class="text-sm muted">อิงโมเดลค่าเสื่อมที่ตั้งไว้</p>
+        </div>
+
+        <div class="card p-5 space-y-2">
+          <div class="flex items-center gap-2 text-lg font-semibold">₿ Bitcoin</div>
+          <div id="btcNow" class="text-3xl font-bold mono">$0</div>
+          <p id="btcMeta" class="text-sm muted mono"></p>
+        </div>
+
+        <div class="md:col-span-2 card p-6 space-y-2">
+          <div class="text-lg font-semibold">ส่วนต่าง</div>
+          <div id="diff" class="text-2xl font-bold mono">$0</div>
+          <div class="text-xs muted">คำนวณ: (มูลค่า BTC ปัจจุบัน − มูลค่า iPhone ประเมิน)</div>
+        </div>
+      </div>
+    </section>
+
+    <footer class="text-xs muted max-w-3xl">
+      <p>
+        หมายเหตุ: เครื่องมือนี้เพื่อการศึกษา ราคา Bitcoin ดึงแบบสาธารณะจาก CoinGecko API.
+        มูลค่า iPhone ใช้โมเดลค่าเสื่อมอย่างง่ายและปรับได้—มูลค่าขายจริงขึ้นกับรุ่น/สภาพ/พื้นที่/ความต้องการตลาด
+      </p>
+    </footer>
+  </main>
+
+  <script>
+    // --- Utilities ---
+    const fmtUSD = new Intl.NumberFormat(undefined, { style: "currency", currency: "USD" });
+    const $ = (id) => document.getElementById(id);
+
+    function toDMY(dateStr /* yyyy-mm-dd */) {
+      // สร้าง dd-mm-yyyy โดยไม่ให้ timezone ทำให้คลาดเคลื่อน
+      const [y, m, d] = dateStr.split("-").map(Number);
+      const dd = String(d).padStart(2, "0");
+      const mm = String(m).padStart(2, "0");
+      return `${dd}-${mm}-${y}`;
+    }
+
+    function yearsBetweenISO(startISO, endDate) {
+      const [y, m, d] = startISO.split("-").map(Number);
+      const start = new Date(Date.UTC(y, m - 1, d));
+      const ms = endDate.getTime() - start.getTime();
+      return Math.max(0, ms / (1000 * 60 * 60 * 24 * 365.25));
+    }
+
+    function estimateIphoneValue(initial, purchaseISO, now, firstYearDrop, annualDrop, floor) {
+      const yrs = yearsBetweenISO(purchaseISO, now);
+      if (yrs <= 0) return initial;
+      const afterFirst = Math.max(0, yrs - 1);
+      const value = initial * (1 - firstYearDrop) * Math.pow(1 - annualDrop, afterFirst);
+      const floorVal = initial * floor;
+      return Math.max(value, floorVal);
+    }
+
+    async function fetchBtcPriceOnISO(purchaseISO) {
+      const dmy = toDMY(purchaseISO);
+      const url = `https://api.coingecko.com/api/v3/coins/bitcoin/history?date=${dmy}`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("ดึงราคา BTC ในอดีตไม่สำเร็จ");
+      const data = await res.json();
+      const price = data?.market_data?.current_price?.usd;
+      if (!price || typeof price !== "number") throw new Error("ไม่มีราคาสำหรับวันดังกล่าว");
+      return price;
+    }
+
+    async function fetchBtcPriceNow() {
+      const url = "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd";
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("ดึงราคา BTC ปัจจุบันไม่สำเร็จ");
+      const data = await res.json();
+      const price = data?.bitcoin?.usd;
+      if (!price || typeof price !== "number") throw new Error("ไม่มีราคาปัจจุบัน");
+      return price;
+    }
+
+    // --- Init max date ---
+    (function init() {
+      const today = new Date();
+      const maxISO = today.toISOString().slice(0, 10);
+      $("date").setAttribute("max", maxISO);
+      $("drop1Val").textContent = $("drop1").value + "%";
+      $("dropNVal").textContent = $("dropN").value + "%";
+      $("floorVal").textContent = $("floor").value + "%";
+    })();
+
+    // --- Preset change ---
+    $("preset").addEventListener("change", (e) => {
+      const v = e.target.value;
+      if (!v) return;
+      const [amt, date] = v.split("|");
+      $("amount").value = amt;
+      $("date").value = date;
+    });
+
+    // --- Range display ---
+    ["drop1", "dropN", "floor"].forEach((id) => {
+      $(id).addEventListener("input", () => {
+        $("drop1Val").textContent = $("drop1").value + "%";
+        $("dropNVal").textContent = $("dropN").value + "%";
+        $("floorVal").textContent = $("floor").value + "%";
+      });
+    });
+
+    // --- Calculate ---
+    $("calcBtn").addEventListener("click", async () => {
+      const amount = Number($("amount").value);
+      const purchaseISO = $("date").value;
+      const firstYearDrop = Number($("drop1").value) / 100;
+      const annualDrop = Number($("dropN").value) / 100;
+      const floorPct = Number($("floor").value) / 100;
+
+      $("error").textContent = "";
+      $("status").textContent = "กำลังดึงข้อมูล...";
+      $("calcBtn").disabled = true;
+
+      try {
+        if (!amount || amount <= 0) throw new Error("กรุณากรอกงบประมาณให้ถูกต้อง");
+        if (!purchaseISO) throw new Error("กรุณาเลือกวันที่ซื้อ");
+
+        const [btcThen, btcNow] = await Promise.all([
+          fetchBtcPriceOnISO(purchaseISO),
+          fetchBtcPriceNow(),
+        ]);
+
+        const btcBought = amount / btcThen;
+        const btcValueNow = btcBought * btcNow;
+
+        const iphoneNow = estimateIphoneValue(
+          amount, purchaseISO, new Date(), firstYearDrop, annualDrop, floorPct
+        );
+
+        // Render
+        $("iphoneNow").textContent = fmtUSD.format(iphoneNow);
+        $("btcNow").textContent = fmtUSD.format(btcValueNow);
+        $("btcMeta").textContent = `BTC ตอนนั้น: ${fmtUSD.format(btcThen)}/BTC → ตอนนี้: ${fmtUSD.format(btcNow)}/BTC`;
+
+        const diff = btcValueNow - iphoneNow;
+        const diffElem = $("diff");
+        diffElem.textContent = (diff >= 0 ? "+" : "") + fmtUSD.format(diff) + " (BTC − iPhone)";
+        diffElem.className = "text-2xl font-bold mono " + (diff >= 0 ? "text-emerald-600" : "text-rose-600");
+
+        $("results").classList.remove("hidden");
+      } catch (err) {
+        $("error").textContent = (err && err.message) ? err.message : String(err);
+        $("results").classList.add("hidden");
+      } finally {
+        $("status").textContent = "";
+        $("calcBtn").disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
